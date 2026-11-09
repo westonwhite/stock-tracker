@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="theme-color" content="#0b1220"/>
+<title>Nov 5–6 Stock Tracker</title>
+<style>
+:root{--bg:#0b1220;--card:#151d2e;--line:#243049;--text:#eef2ff;--muted:#8b9bb4;--green:#22c55e;--red:#ef4444;--blue:#3b82f6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:14px 12px 36px}
+.wrap{max-width:640px;margin:0 auto}
+h1{font-size:1.05rem;margin:0 0 4px}
+.sub{color:var(--muted);font-size:.78rem;margin-bottom:12px}
+.totals{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+.totals .label{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.04em}
+.totals .big{font-size:1.85rem;font-weight:800;margin:2px 0 10px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.pill{flex:1;min-width:120px;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:12px;padding:10px}
+.pill .k{color:var(--muted);font-size:.68rem}
+.pill .v{font-weight:700;margin-top:2px}
+.up{color:var(--green)}.down{color:var(--red)}
+button#refresh{width:100%;border:0;background:var(--blue);color:#fff;font-weight:700;font-size:1rem;padding:14px;border-radius:12px;margin:4px 0 12px;cursor:pointer}
+button#refresh:disabled{opacity:.6}
+.warn{background:rgba(239,68,68,.12);color:#fecaca;border:1px solid rgba(239,68,68,.3);padding:10px 12px;border-radius:10px;font-size:.85rem;margin-bottom:10px;display:none}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:8px}
+.card .top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.ticker{font-weight:800;font-size:1.05rem}
+.meta{color:var(--muted);font-size:.72rem}
+.price{font-weight:700;text-align:right}
+.day{font-size:.78rem;text-align:right}
+.gain{margin-top:8px;font-weight:700;font-size:.9rem}
+.bar{height:6px;background:#1e293b;border-radius:99px;margin-top:8px;overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:99px}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.grid .k{color:var(--muted);font-size:.65rem}.grid .v{font-size:.82rem;font-weight:600}
+#status{color:var(--muted);font-size:.75rem;margin-top:10px;line-height:1.35}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Nov 5–6 buys</h1>
+  <div class="sub">Mark to market · tap Refresh anytime</div>
+  <div class="totals">
+    <div class="label">Portfolio value</div>
+    <div class="big" id="totalValue">—</div>
+    <div class="row">
+      <div class="pill"><div class="k">Total return</div><div class="v" id="totalReturn">—</div></div>
+      <div class="pill"><div class="k">Return %</div><div class="v" id="totalPct">—</div></div>
+      <div class="pill"><div class="k">Cost basis</div><div class="v" id="totalCost">—</div></div>
+    </div>
+  </div>
+  <div class="warn" id="warn"></div>
+  <button id="refresh" type="button">Refresh</button>
+  <div id="list"></div>
+  <div id="status"></div>
+</div>
+<script>
+const POSITIONS = [
+  { ticker:"SNDK", shares:7,  avgCost:839.19, totalCost:5874.36, tv:"NASDAQ:SNDK" },
+  { ticker:"OKTA", shares:25, avgCost:169.90, totalCost:4247.54, tv:"NASDAQ:OKTA" },
+  { ticker:"DELL", shares:5,  avgCost:331.44, totalCost:1657.18, tv:"NYSE:DELL" },
+  { ticker:"MRNA", shares:6,  avgCost:242.32, totalCost:1453.93, tv:"NASDAQ:MRNA" },
+  { ticker:"TWST", shares:8,  avgCost:120.59, totalCost:964.74,  tv:"NASDAQ:TWST" },
+  { ticker:"TER",  shares:4,  avgCost:220.77, totalCost:883.08,  tv:"NASDAQ:TER" },
+  { ticker:"NKE",  shares:15, avgCost:38.62,  totalCost:579.24,  tv:"NYSE:NKE" },
+  { ticker:"TSLA", shares:5,  avgCost:383.13, totalCost:1915.66, tv:"NASDAQ:TSLA" },
+];
+
+/* Baked last-known snapshot so the page always shows numbers immediately */
+const BAKED = {"asOf": "2026-11-09T18:01:59.487291Z", "source": "tradingview", "quotes": {"SNDK": {"price": 893.5, "dayChange": 58.44, "dayChangePct": 6.9983, "name": "Sandisk Corporation"}, "OKTA": {"price": 179.26, "dayChange": 10.57, "dayChangePct": 6.2659, "name": "Okta, Inc. Class A"}, "DELL": {"price": 350.46, "dayChange": 21.93, "dayChangePct": 6.6752, "name": "Dell Technologies, Inc. Class C"}, "MRNA": {"price": 277.22, "dayChange": 23.03, "dayChangePct": 9.0602, "name": "Moderna, Inc."}, "TWST": {"price": 133.84, "dayChange": 13.05, "dayChangePct": 10.8039, "name": "Twist Bioscience Corp."}, "TER": {"price": 238.0, "dayChange": 19.785, "dayChangePct": 9.0667, "name": "Teradyne, Inc."}, "NKE": {"price": 39.855, "dayChange": 1.265, "dayChangePct": 3.2781, "name": "NIKE, Inc. Class B"}, "TSLA": {"price": 377.25, "dayChange": 19.03, "dayChangePct": 5.3124, "name": "Tesla, Inc."}}};
+
+const CACHE_KEY = "stock-tracker-v1";
+const $ = (id) => document.getElementById(id);
+const money = (n) => (n==null||Number.isNaN(n)) ? "—" : n.toLocaleString("en-US",{style:"currency",currency:"USD"});
+const pct = (n) => (n==null||Number.isNaN(n)) ? "—" : `${n>=0?"+":""}${n.toFixed(2)}%`;
+const signed = (n) => (n==null||Number.isNaN(n)) ? "—" : `${n>=0?"+":"-"}${money(Math.abs(n))}`;
+const cls = (n) => n>0.005 ? "up" : n<-0.005 ? "down" : "";
+
+function etStamp(iso) {
+  const d = iso ? new Date(iso) : new Date();
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone:"America/New_York", weekday:"short", month:"short", day:"numeric",
+    hour:"numeric", minute:"2-digit", second:"2-digit", hour12:true, timeZoneName:"short"
+  }).format(d);
+}
+
+function loadCache() {
+  try { return JSON.parse(localStorage.getItem(CACHE_KEY) || "null"); } catch { return null; }
+}
+function saveCache(payload) {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(payload)); } catch {}
+}
+
+function bestSeed() {
+  const cached = loadCache();
+  if (cached?.quotes && cached?.asOf) {
+    if (!BAKED?.asOf || new Date(cached.asOf) >= new Date(BAKED.asOf)) return { ...cached, source: (cached.source||"cache") + " (device)" };
+  }
+  return { ...BAKED, source: (BAKED.source||"baked") + " (built-in)" };
+}
+
+function render(payload, softWarn) {
+  const quotes = payload.quotes || {};
+  const rows = POSITIONS.map(p => {
+    const q = quotes[p.ticker] || {};
+    const price = Number(q.price);
+    if (!Number.isFinite(price)) return null;
+    const mv = price * p.shares;
+    const gain = mv - p.totalCost;
+    const gainPct = (gain / p.totalCost) * 100;
+    return {
+      ...p, name: q.name || p.ticker, price,
+      dayChange: Number(q.dayChange)||0,
+      dayChangePct: Number(q.dayChangePct)||0,
+      mv, gain, gainPct
+    };
+  }).filter(Boolean);
+  rows.sort((a,b) => b.gainPct - a.gainPct);
+
+  const totalCost = POSITIONS.reduce((s,p)=>s+p.totalCost,0);
+  const totalVal = rows.reduce((s,r)=>s+r.mv,0);
+  const tg = totalVal - totalCost;
+  const tp = (tg / totalCost) * 100;
+
+  $("totalValue").textContent = money(totalVal);
+  $("totalReturn").textContent = signed(tg);
+  $("totalReturn").className = "v " + cls(tg);
+  $("totalPct").textContent = pct(tp);
+  $("totalPct").className = "v " + cls(tp);
+  $("totalCost").textContent = money(totalCost);
+
+  const maxAbs = Math.max(10, ...rows.map(r => Math.abs(r.gainPct)));
+  $("list").innerHTML = rows.map(r => {
+    const w = Math.min(100, Math.abs(r.gainPct) / maxAbs * 100);
+    const color = r.gainPct >= 0 ? "var(--green)" : "var(--red)";
+    return `<article class="card">
+      <div class="top">
+        <div><div class="ticker">${r.ticker}</div><div class="meta">${r.shares} sh · avg ${money(r.avgCost)}</div></div>
+        <div><div class="price">${money(r.price)}</div><div class="day ${cls(r.dayChange)}">${signed(r.dayChange)} (${pct(r.dayChangePct)})</div></div>
+      </div>
+      <div class="gain ${cls(r.gain)}">${signed(r.gain)} · ${pct(r.gainPct)}</div>
+      <div class="bar"><i style="width:${w}%;background:${color}"></i></div>
+      <div class="grid">
+        <div><div class="k">Value</div><div class="v">${money(r.mv)}</div></div>
+        <div><div class="k">Cost</div><div class="v">${money(r.totalCost)}</div></div>
+        <div><div class="k">Day %</div><div class="v ${cls(r.dayChangePct)}">${pct(r.dayChangePct)}</div></div>
+      </div>
+    </article>`;
+  }).join("");
+
+  const warn = $("warn");
+  if (softWarn) { warn.style.display = "block"; warn.textContent = softWarn; }
+  else warn.style.display = "none";
+
+  $("status").textContent = `Source: ${payload.source || "?"} · Updated ${etStamp(payload.asOf)} · ${rows.length} tickers`;
+  return { totalVal, tg, tp };
+}
+
+async function fetchPricesJson() {
+  const r = await fetch("./prices.json?ts=" + Date.now(), { cache: "no-store" });
+  if (!r.ok) throw new Error("prices.json " + r.status);
+  const d = await r.json();
+  if (!d.quotes) throw new Error("prices.json empty");
+  return { asOf: d.asOf || new Date().toISOString(), source: d.source || "prices.json", quotes: d.quotes };
+}
+
+async function yahooOne(ticker) {
+  const yurl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=5d`;
+  const proxied = "https://api.allorigins.win/raw?url=" + encodeURIComponent(yurl);
+  const r = await fetch(proxied, { cache: "no-store" });
+  if (!r.ok) throw new Error("yahoo proxy " + r.status);
+  const d = await r.json();
+  const m = d?.chart?.result?.[0]?.meta;
+  if (!m?.regularMarketPrice) throw new Error("yahoo empty " + ticker);
+  const price = Number(m.regularMarketPrice);
+  const prev = Number(m.chartPreviousClose ?? m.previousClose ?? price);
+  return {
+    price,
+    dayChange: price - prev,
+    dayChangePct: prev ? ((price - prev) / prev) * 100 : 0,
+    name: m.shortName || ticker
+  };
+}
+
+async function fetchYahooAllOrigins() {
+  const quotes = {};
+  let ok = 0;
+  await Promise.all(POSITIONS.map(async (p) => {
+    try {
+      quotes[p.ticker] = await yahooOne(p.ticker);
+      ok++;
+    } catch (e) {
+      quotes[p.ticker] = { error: String(e) };
+    }
+  }));
+  if (ok < 4) throw new Error("yahoo proxy only got " + ok);
+  // fill gaps from seed later by caller
+  return { asOf: new Date().toISOString(), source: "Yahoo (allorigins)", quotes };
+}
+
+async function fetchTradingView() {
+  const body = {
+    symbols: { tickers: POSITIONS.map(p => p.tv), query: { types: [] } },
+    columns: ["close", "change", "change_abs", "description"]
+  };
+  const r = await fetch("https://scanner.tradingview.com/america/scan", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store"
+  });
+  if (!r.ok) throw new Error("tradingview " + r.status);
+  const data = await r.json();
+  const quotes = {};
+  for (const row of (data.data || [])) {
+    const t = String(row.s).split(":").pop();
+    const [price, dayPct, dayAbs, name] = row.d;
+    quotes[t] = { price, dayChange: dayAbs, dayChangePct: dayPct, name };
+  }
+  if (Object.keys(quotes).length < 4) throw new Error("tradingview sparse");
+  return { asOf: new Date().toISOString(), source: "TradingView", quotes };
+}
+
+function mergeQuotes(primary, fallback) {
+  const out = { ...(fallback.quotes || {}) };
+  for (const [t, q] of Object.entries(primary.quotes || {})) {
+    if (q && Number.isFinite(Number(q.price))) out[t] = q;
+  }
+  return out;
+}
+
+async function liveRefresh(seed) {
+  const errors = [];
+  const tryOrder = [fetchPricesJson, fetchYahooAllOrigins, fetchTradingView];
+  for (const fn of tryOrder) {
+    try {
+      const live = await fn();
+      const quotes = mergeQuotes(live, seed);
+      const payload = { asOf: live.asOf, source: live.source, quotes };
+      // require all 8 priced
+      const n = POSITIONS.filter(p => Number.isFinite(Number(quotes[p.ticker]?.price))).length;
+      if (n < 8) throw new Error(fn.name + " incomplete " + n);
+      return payload;
+    } catch (e) {
+      errors.push((fn.name || "src") + ": " + (e && e.message ? e.message : e));
+    }
+  }
+  throw new Error(errors.join(" | "));
+}
+
+async function refresh() {
+  const btn = $("refresh");
+  btn.disabled = true;
+  btn.textContent = "Updating…";
+  const seed = bestSeed();
+  render(seed); // instant numbers
+  try {
+    const live = await liveRefresh(seed);
+    saveCache(live);
+    render(live);
+  } catch (e) {
+    saveCache(seed);
+    render(seed, "Live update failed — showing last known prices. " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Refresh";
+  }
+}
+
+$("refresh").onclick = refresh;
+refresh();
+</script>
+</body>
+</html>
