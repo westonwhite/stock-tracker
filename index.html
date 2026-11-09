@@ -2,95 +2,46 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta name="theme-color" content="#0b1220"/>
-<title>Nov 5–6 Stock Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Stock Tracker</title>
 <style>
-  :root {
-    --bg:#0b1220; --card:#141c2e; --card2:#1a2438; --text:#eef2ff; --muted:#93a0b8;
-    --green:#22c55e; --green-bg:rgba(34,197,94,.12); --red:#ef4444; --red-bg:rgba(239,68,68,.12);
-    --line:#243049; --accent:#3b82f6; --shadow:0 8px 28px rgba(0,0,0,.35);
-  }
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-  body{min-height:100dvh;padding:16px 14px 40px}
-  .wrap{max-width:720px;margin:0 auto}
-  header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
-  h1{font-size:1.15rem;margin:0;font-weight:700;letter-spacing:.2px}
-  .sub{color:var(--muted);font-size:.78rem;margin-top:4px}
-  button#refresh{
-    appearance:none;border:0;background:var(--accent);color:white;font-weight:700;
-    padding:12px 16px;border-radius:12px;font-size:.95rem;cursor:pointer;
-    box-shadow:0 4px 14px rgba(59,130,246,.35);min-width:108px;
-  }
-  button#refresh:disabled{opacity:.55;cursor:wait}
-  button#refresh:active{transform:scale(.97)}
-  .totals{
-    background:linear-gradient(160deg,var(--card),var(--card2));
-    border:1px solid var(--line);border-radius:18px;padding:18px 16px;box-shadow:var(--shadow);margin-bottom:14px;
-  }
-  .totals .label{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em}
-  .totals .value{font-size:2rem;font-weight:800;margin:4px 0 10px;letter-spacing:-.5px}
-  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-  .stat{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:12px;padding:10px}
-  .stat .k{color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em}
-  .stat .v{font-size:1rem;font-weight:700;margin-top:3px}
-  .up{color:var(--green)} .down{color:var(--red)} .flat{color:var(--muted)}
-  .meta{color:var(--muted);font-size:.75rem;margin:10px 2px 0;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
-  .list{display:flex;flex-direction:column;gap:10px}
-  .card{
-    background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;
-    display:grid;grid-template-columns:1fr auto;gap:8px 12px;align-items:center;
-  }
-  .ticker{font-size:1.05rem;font-weight:800;letter-spacing:.3px}
-  .name{color:var(--muted);font-size:.72rem;margin-top:2px}
-  .price{font-size:1.05rem;font-weight:700;text-align:right}
-  .day{font-size:.78rem;text-align:right;margin-top:2px}
-  .pill{
-    display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;
-    font-size:.78rem;font-weight:700;white-space:nowrap;
-  }
-  .pill.up{background:var(--green-bg);color:var(--green)}
-  .pill.down{background:var(--red-bg);color:var(--red)}
-  .details{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-top:8px;border-top:1px solid var(--line);margin-top:2px}
-  .details .k{color:var(--muted);font-size:.65rem;text-transform:uppercase}
-  .details .v{font-size:.85rem;font-weight:600;margin-top:2px}
-  .err{background:var(--red-bg);color:#fecaca;border:1px solid rgba(239,68,68,.35);padding:12px;border-radius:12px;margin-bottom:12px;font-size:.9rem}
-  .hint{color:var(--muted);font-size:.72rem;text-align:center;margin-top:18px;line-height:1.4}
-  @media (max-width:420px){
-    .totals .value{font-size:1.7rem}
-    .row3{grid-template-columns:1fr; }
-  }
+  body{font-family:system-ui,sans-serif;margin:12px;background:#111;color:#eee}
+  h1{font-size:1.1rem;margin:0 0 8px}
+  .tot{background:#1a1a1a;padding:12px;border-radius:8px;margin-bottom:12px}
+  .tot b{font-size:1.4rem}
+  .up{color:#3ddc84}.down{color:#ff6b6b}
+  button{font-size:1rem;padding:10px 16px;margin:8px 0 12px;cursor:pointer}
+  table{width:100%;border-collapse:collapse;font-size:.9rem}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid #333}
+  th{color:#aaa;font-weight:600}
+  td.r,th.r{text-align:right}
+  #meta{color:#888;font-size:.8rem;margin-top:8px}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div>
-      <h1>Nov 5–6 buys</h1>
-      <div class="sub">Tap Refresh to mark to market</div>
-    </div>
-    <button id="refresh" type="button">Refresh</button>
-  </header>
-  <div id="error" class="err" hidden></div>
-  <section class="totals" id="totals">
-    <div class="label">Portfolio value</div>
-    <div class="value" id="totalValue">—</div>
-    <div class="row3">
-      <div class="stat"><div class="k">Total return</div><div class="v" id="totalReturn">—</div></div>
-      <div class="stat"><div class="k">Return %</div><div class="v" id="totalPct">—</div></div>
-      <div class="stat"><div class="k">Cost basis</div><div class="v" id="totalCost">—</div></div>
-    </div>
-    <div class="meta">
-      <span id="updated">Not updated yet</span>
-      <span id="status"></span>
-    </div>
-  </section>
-  <div class="list" id="list"></div>
-  <p class="hint">Bought Nov 5–6, 2026 · Sorted by % return · Prices via TradingView (GitHub Pages) or Yahoo (Cloudflare Worker)</p>
+<h1>Nov 5–6 buys</h1>
+<div class="tot">
+  Value <b id="val">—</b><br>
+  Return <b id="ret">—</b> <span id="pct"></span><br>
+  Cost <span id="cost">—</span>
 </div>
+<button id="refresh" type="button">Refresh</button>
+<table>
+  <thead>
+    <tr>
+      <th>Ticker</th>
+      <th class="r">Price</th>
+      <th class="r">Day</th>
+      <th class="r">Value</th>
+      <th class="r">Gain $</th>
+      <th class="r">Gain %</th>
+    </tr>
+  </thead>
+  <tbody id="rows"></tbody>
+</table>
+<div id="meta"></div>
 <script>
-/* ===== Easy-to-edit positions (bought Nov 5–6, 2026) ===== */
+/* Easy-to-edit positions (bought Nov 5–6, 2026) */
 const POSITIONS = [
   { ticker: "SNDK", shares: 7,  avgCost: 839.19, totalCost: 5874.36, tv: "NASDAQ:SNDK" },
   { ticker: "OKTA", shares: 25, avgCost: 169.90, totalCost: 4247.54, tv: "NASDAQ:OKTA" },
@@ -101,158 +52,106 @@ const POSITIONS = [
   { ticker: "NKE",  shares: 15, avgCost: 38.62,  totalCost: 579.24,  tv: "NYSE:NKE" },
   { ticker: "TSLA", shares: 5,  avgCost: 383.13, totalCost: 1915.66, tv: "NASDAQ:TSLA" },
 ];
-/* ========================================================= */
 
 const $ = (id) => document.getElementById(id);
-const money = (n) => n == null || Number.isNaN(n) ? "—" :
-  n.toLocaleString("en-US", { style: "currency", currency: "USD" });
-const pct = (n) => n == null || Number.isNaN(n) ? "—" :
-  `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
-const signedMoney = (n) => n == null || Number.isNaN(n) ? "—" :
-  `${n >= 0 ? "+" : "-"}${money(Math.abs(n))}`;
-const cls = (n) => n > 0.0005 ? "up" : n < -0.0005 ? "down" : "flat";
+const money = (n) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+const pct = (n) => `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
+const signed = (n) => `${n >= 0 ? "+" : "-"}${money(Math.abs(n))}`;
+const cls = (n) => (n > 0 ? "up" : n < 0 ? "down" : "");
 
-function etStamp(d = new Date()) {
+function etNow() {
   return new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
-    weekday: "short", month: "short", day: "numeric",
+    month: "short", day: "numeric",
     hour: "numeric", minute: "2-digit", second: "2-digit",
     hour12: true, timeZoneName: "short"
-  }).format(d);
+  }).format(new Date());
 }
 
-async function fetchViaWorker() {
-  const r = await fetch("/api/quotes", { cache: "no-store" });
-  if (!r.ok) throw new Error(`Worker quotes HTTP ${r.status}`);
-  const data = await r.json();
-  return data.quotes || data;
-}
-
-async function fetchViaTradingView() {
+async function quotes() {
+  // Prefer Worker proxy when available
+  try {
+    const r = await fetch("/api/quotes", { cache: "no-store" });
+    if (r.ok) {
+      const d = await r.json();
+      return d.quotes || d;
+    }
+  } catch (_) {}
   const body = {
-    symbols: { tickers: POSITIONS.map(p => p.tv), query: { types: [] } },
-    columns: ["close", "change", "change_abs", "description"]
+    symbols: { tickers: POSITIONS.map((p) => p.tv), query: { types: [] } },
+    columns: ["close", "change", "change_abs", "description"],
   };
   const r = await fetch("https://scanner.tradingview.com/america/scan", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-    cache: "no-store"
+    cache: "no-store",
   });
-  if (!r.ok) throw new Error(`TradingView HTTP ${r.status}`);
+  if (!r.ok) throw new Error("quotes HTTP " + r.status);
   const data = await r.json();
-  const bySym = {};
-  for (const row of (data.data || [])) {
-    const bare = String(row.s || "").split(":").pop();
-    const [close, changePct, changeAbs, description] = row.d;
-    bySym[bare] = {
-      price: close,
-      dayChange: changeAbs,
-      dayChangePct: changePct,
-      name: description || bare
-    };
+  const out = {};
+  for (const row of data.data || []) {
+    const t = String(row.s).split(":").pop();
+    const [price, dayPct, dayAbs] = row.d;
+    out[t] = { price, dayChange: dayAbs, dayChangePct: dayPct };
   }
-  return bySym;
-}
-
-async function loadQuotes() {
-  // Prefer same-origin Worker proxy when available; else TradingView (CORS OK for Pages).
-  try {
-    if (location.hostname.endsWith("workers.dev") || location.pathname.includes("api")) {
-      return { quotes: await fetchViaWorker(), source: "Yahoo via Worker" };
-    }
-  } catch (_) {}
-  try {
-    const probe = await fetch("/api/quotes", { cache: "no-store" });
-    if (probe.ok) {
-      const data = await probe.json();
-      return { quotes: data.quotes || data, source: "Yahoo via Worker" };
-    }
-  } catch (_) {}
-  return { quotes: await fetchViaTradingView(), source: "TradingView" };
-}
-
-function render(quotes) {
-  const rows = POSITIONS.map(p => {
-    const q = quotes[p.ticker] || {};
-    const price = Number(q.price);
-    const marketValue = price * p.shares;
-    const gain = marketValue - p.totalCost;
-    const gainPct = (gain / p.totalCost) * 100;
-    return {
-      ...p,
-      name: q.name || p.ticker,
-      price,
-      dayChange: Number(q.dayChange),
-      dayChangePct: Number(q.dayChangePct),
-      marketValue,
-      gain,
-      gainPct,
-      ok: Number.isFinite(price)
-    };
-  }).filter(r => r.ok);
-
-  rows.sort((a, b) => b.gainPct - a.gainPct);
-
-  const totalCost = POSITIONS.reduce((s, p) => s + p.totalCost, 0);
-  const totalValue = rows.reduce((s, r) => s + r.marketValue, 0);
-  const totalGain = totalValue - totalCost;
-  const totalGainPct = (totalGain / totalCost) * 100;
-
-  $("totalValue").textContent = money(totalValue);
-  $("totalReturn").textContent = signedMoney(totalGain);
-  $("totalReturn").className = "v " + cls(totalGain);
-  $("totalPct").textContent = pct(totalGainPct);
-  $("totalPct").className = "v " + cls(totalGainPct);
-  $("totalCost").textContent = money(totalCost);
-
-  $("list").innerHTML = rows.map(r => `
-    <article class="card">
-      <div>
-        <div class="ticker">${r.ticker}</div>
-        <div class="name">${r.shares} sh · avg ${money(r.avgCost)}</div>
-      </div>
-      <div>
-        <div class="price">${money(r.price)}</div>
-        <div class="day ${cls(r.dayChange)}">${signedMoney(r.dayChange)} (${pct(r.dayChangePct)})</div>
-      </div>
-      <div style="grid-column:1/-1">
-        <span class="pill ${cls(r.gain)}">${signedMoney(r.gain)} · ${pct(r.gainPct)}</span>
-      </div>
-      <div class="details">
-        <div><div class="k">Market value</div><div class="v">${money(r.marketValue)}</div></div>
-        <div><div class="k">Cost</div><div class="v">${money(r.totalCost)}</div></div>
-        <div><div class="k">Day move</div><div class="v ${cls(r.dayChange)}">${pct(r.dayChangePct)}</div></div>
-      </div>
-    </article>
-  `).join("");
-
-  return { totalValue, totalGain, totalGainPct, totalCost, count: rows.length };
+  return out;
 }
 
 async function refresh() {
   const btn = $("refresh");
-  const err = $("error");
-  err.hidden = true;
   btn.disabled = true;
   btn.textContent = "Updating…";
-  $("status").textContent = "Fetching live prices…";
   try {
-    const { quotes, source } = await loadQuotes();
-    const summary = render(quotes);
-    $("updated").textContent = "Updated " + etStamp();
-    $("status").textContent = source + " · " + summary.count + " tickers";
+    const q = await quotes();
+    const totalCost = POSITIONS.reduce((s, p) => s + p.totalCost, 0);
+    let totalVal = 0;
+    const rows = POSITIONS.map((p) => {
+      const price = Number(q[p.ticker]?.price);
+      const mv = price * p.shares;
+      const gain = mv - p.totalCost;
+      const gainPct = (gain / p.totalCost) * 100;
+      totalVal += mv;
+      return {
+        ...p,
+        price,
+        dayChange: Number(q[p.ticker]?.dayChange),
+        dayChangePct: Number(q[p.ticker]?.dayChangePct),
+        mv,
+        gain,
+        gainPct,
+      };
+    }).filter((r) => Number.isFinite(r.price));
+    rows.sort((a, b) => b.gainPct - a.gainPct);
+    const tg = totalVal - totalCost;
+    const tp = (tg / totalCost) * 100;
+    $("val").textContent = money(totalVal);
+    $("ret").textContent = signed(tg);
+    $("ret").className = cls(tg);
+    $("pct").innerHTML = `<span class="${cls(tp)}">(${pct(tp)})</span>`;
+    $("cost").textContent = money(totalCost);
+    $("rows").innerHTML = rows
+      .map(
+        (r) => `<tr>
+      <td><b>${r.ticker}</b><br><span style="color:#888;font-size:.75rem">${r.shares} @ ${money(r.avgCost)}</span></td>
+      <td class="r">${money(r.price)}</td>
+      <td class="r ${cls(r.dayChange)}">${pct(r.dayChangePct)}</td>
+      <td class="r">${money(r.mv)}</td>
+      <td class="r ${cls(r.gain)}">${signed(r.gain)}</td>
+      <td class="r ${cls(r.gainPct)}">${pct(r.gainPct)}</td>
+    </tr>`
+      )
+      .join("");
+    $("meta").textContent = "Updated " + etNow();
   } catch (e) {
-    err.hidden = false;
-    err.textContent = "Could not refresh prices: " + (e && e.message ? e.message : e);
-    $("status").textContent = "Refresh failed";
+    $("meta").textContent = "Refresh failed: " + e.message;
   } finally {
     btn.disabled = false;
     btn.textContent = "Refresh";
   }
 }
 
-$("refresh").addEventListener("click", refresh);
+$("refresh").onclick = refresh;
 refresh();
 </script>
 </body>
