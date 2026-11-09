@@ -1,0 +1,108 @@
+name: Refresh prices.json
+on:
+  schedule:
+    # Every 15 min, Mon–Fri. Script no-ops outside ~9:00–16:30 ET.
+    - cron: '*/15 * * * 1-5'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch quotes and commit prices.json
+        run: |
+          python3 <<'PY'
+          import json, urllib.request, os
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+
+          et = ZoneInfo("America/New_York")
+          now = datetime.now(et)
+          # Market hours window with a little pad (also allow workflow_dispatch anytime via force)
+          force = os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch"
+          mins = now.hour * 60 + now.minute
+          if not force and (now.weekday() >= 5 or mins < 9 * 60 or mins > 16 * 60 + 30):
+              print(f"Outside market window ({now.isoformat()}); skipping.")
+              raise SystemExit(0)
+
+          tickers = [
+              "NASDAQ:SNDK","NASDAQ:OKTA","NYSE:DELL","NASDAQ:MRNA",
+              "NASDAQ:TWST","NASDAQ:TER","NYSE:NKE","NASDAQ:TSLA",
+          ]
+          body = {
+              "symbols": {"tickers": tickers, "query": {"types": []}},
+              "columns": ["close", "change", "change_abs", "description"],
+          }
+
+          def tv():
+              req = urllib.request.Request(
+                  "https://scanner.tradingview.com/america/scan",
+                  data=json.dumps(body).encode(),
+                  headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
+              )
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  return json.load(r)
+
+          def yahoo(t):
+              url = f"https://query1.finance.yahoo.com/v8/finance/chart/{t}?interval=1d&range=5d"
+              req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+              with urllib.request.urlopen(req, timeout=20) as r:
+                  m = json.load(r)["chart"]["result"][0]["meta"]
+              price = float(m["regularMarketPrice"])
+              prev = float(m.get("chartPreviousClose") or m.get("previousClose") or price)
+              return {
+                  "price": round(price, 4),
+                  "dayChange": round(price - prev, 4),
+                  "dayChangePct": round(((price - prev) / prev) * 100, 4) if prev else 0,
+                  "name": m.get("shortName") or t,
+              }
+
+          quotes = {}
+          source = "tradingview"
+          try:
+              d = tv()
+              for row in d.get("data") or []:
+                  t = row["s"].split(":")[-1]
+                  price, dayPct, dayAbs, name = row["d"]
+                  quotes[t] = {
+                      "price": round(float(price), 4),
+                      "dayChange": round(float(dayAbs), 4),
+                      "dayChangePct": round(float(dayPct), 4),
+                      "name": name,
+                  }
+          except Exception as e:
+              print("TV failed:", e)
+              source = "yahoo"
+              for t in ["SNDK","OKTA","DELL","MRNA","TWST","TER","NKE","TSLA"]:
+                  quotes[t] = yahoo(t)
+
+          needed = ["SNDK","OKTA","DELL","MRNA","TWST","TER","NKE","TSLA"]
+          missing = [t for t in needed if t not in quotes]
+          if missing and source == "tradingview":
+              for t in missing:
+                  quotes[t] = yahoo(t)
+              source = "tradingview+yahoo"
+
+          payload = {
+              "asOf": datetime.now(ZoneInfo("UTC")).isoformat().replace("+00:00", "Z"),
+              "source": source,
+              "quotes": quotes,
+          }
+          with open("prices.json", "w") as f:
+              json.dump(payload, f, indent=2)
+              f.write("\n")
+          print("Wrote prices.json", payload["asOf"], source, {t: quotes[t]["price"] for t in needed})
+          PY
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add prices.json
+          if git diff --cached --quiet; then
+            echo "No price change"
+          else
+            git commit -m "chore: refresh prices.json $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push
+          fi
