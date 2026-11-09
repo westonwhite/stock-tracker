@@ -2,27 +2,32 @@
 
 Mobile-friendly mark-to-market page for Weston's Nov 5–6, 2026 buys.
 
-## Positions
+## Live site
 
-Edit the `POSITIONS` array near the top of `index.html` (and the matching array in `src/index.js` if using the Worker quote proxy).
+**GitHub Pages (live now):** https://westonwhite.github.io/stock-tracker/
 
-## Live site (GitHub Pages)
+Tap **Refresh** (also auto-loads on open). No background polling.
+Prices come from TradingView’s public scanner when hosted on Pages.
+When deployed as a Cloudflare Worker, `/api/quotes` proxies Yahoo Finance (CNBC fallback).
 
-https://westonwhite.github.io/stock-tracker/
+## Edit positions
 
-Refresh pulls live prices from TradingView's public scanner (CORS-friendly). No background polling.
+One array near the top of `index.html` / `public/index.html`:
 
-## Cloudflare Worker (preferred when auth works)
+```js
+const POSITIONS = [
+  { ticker: "SNDK", shares: 7, avgCost: 839.19, totalCost: 5874.36, tv: "NASDAQ:SNDK" },
+  ...
+];
+```
+
+## Cloudflare Worker
 
 ```bash
 cd /workspace/stock-tracker
 npx wrangler deploy
 ```
 
-Worker serves the same UI and `/api/quotes` (Yahoo Finance chart API, CNBC fallback).
+Uses account `62c5bccd307ce0dc53b6330558dec4a3` when logged in. Does not touch other Workers.
 
-Account: `62c5bccd307ce0dc53b6330558dec4a3` (same as tesla-fleet). Does not modify other Workers.
-
-## Note
-
-Cloudflare OAuth on this box expired (2026-10-30). Until `wrangler login` is refreshed, use the GitHub Pages URL above.
+Cloudflare OAuth on this box expired 2026-10-30; GitHub Pages is the lasting public URL until `wrangler login` is refreshed.
