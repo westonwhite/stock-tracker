@@ -1,0 +1,5 @@
+name = "stock-tracker"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+account_id = "62c5bccd307ce0dc53b6330558dec4a3"
+workers_dev = true
