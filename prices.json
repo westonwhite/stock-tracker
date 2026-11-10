@@ -1,53 +1,53 @@
 {
-  "asOf": "2026-11-09T18:01:59.487291Z",
+  "asOf": "2026-11-10T18:43:26.767194Z",
   "source": "tradingview",
   "quotes": {
     "SNDK": {
-      "price": 893.5,
-      "dayChange": 58.44,
-      "dayChangePct": 6.9983,
+      "price": 841.0,
+      "dayChange": -45.51,
+      "dayChangePct": -5.1336,
       "name": "Sandisk Corporation"
     },
     "OKTA": {
-      "price": 179.26,
-      "dayChange": 10.57,
-      "dayChangePct": 6.2659,
+      "price": 176.495,
+      "dayChange": -1.075,
+      "dayChangePct": -0.6054,
       "name": "Okta, Inc. Class A"
     },
     "DELL": {
-      "price": 350.46,
-      "dayChange": 21.93,
-      "dayChangePct": 6.6752,
+      "price": 325.72,
+      "dayChange": -20.59,
+      "dayChangePct": -5.9455,
       "name": "Dell Technologies, Inc. Class C"
     },
     "MRNA": {
-      "price": 277.22,
-      "dayChange": 23.03,
-      "dayChangePct": 9.0602,
+      "price": 258.48,
+      "dayChange": -10.52,
+      "dayChangePct": -3.9108,
       "name": "Moderna, Inc."
     },
     "TWST": {
-      "price": 133.84,
-      "dayChange": 13.05,
-      "dayChangePct": 10.8039,
+      "price": 131.435,
+      "dayChange": -3.905,
+      "dayChangePct": -2.8853,
       "name": "Twist Bioscience Corp."
     },
     "TER": {
-      "price": 238.0,
-      "dayChange": 19.785,
-      "dayChangePct": 9.0667,
+      "price": 241.96,
+      "dayChange": -4.04,
+      "dayChangePct": -1.6423,
       "name": "Teradyne, Inc."
     },
     "NKE": {
-      "price": 39.855,
-      "dayChange": 1.265,
-      "dayChangePct": 3.2781,
+      "price": 38.985,
+      "dayChange": -0.895,
+      "dayChangePct": -2.2442,
       "name": "NIKE, Inc. Class B"
     },
     "TSLA": {
-      "price": 377.25,
-      "dayChange": 19.03,
-      "dayChangePct": 5.3124,
+      "price": 377.09,
+      "dayChange": -0.96,
+      "dayChangePct": -0.2539,
       "name": "Tesla, Inc."
     }
   }

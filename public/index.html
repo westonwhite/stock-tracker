@@ -68,9 +68,9 @@ const POSITIONS = [
 ];
 
 /* Baked last-known snapshot so the page always shows numbers immediately */
-const BAKED = {"asOf": "2026-11-09T18:01:59.487291Z", "source": "tradingview", "quotes": {"SNDK": {"price": 893.5, "dayChange": 58.44, "dayChangePct": 6.9983, "name": "Sandisk Corporation"}, "OKTA": {"price": 179.26, "dayChange": 10.57, "dayChangePct": 6.2659, "name": "Okta, Inc. Class A"}, "DELL": {"price": 350.46, "dayChange": 21.93, "dayChangePct": 6.6752, "name": "Dell Technologies, Inc. Class C"}, "MRNA": {"price": 277.22, "dayChange": 23.03, "dayChangePct": 9.0602, "name": "Moderna, Inc."}, "TWST": {"price": 133.84, "dayChange": 13.05, "dayChangePct": 10.8039, "name": "Twist Bioscience Corp."}, "TER": {"price": 238.0, "dayChange": 19.785, "dayChangePct": 9.0667, "name": "Teradyne, Inc."}, "NKE": {"price": 39.855, "dayChange": 1.265, "dayChangePct": 3.2781, "name": "NIKE, Inc. Class B"}, "TSLA": {"price": 377.25, "dayChange": 19.03, "dayChangePct": 5.3124, "name": "Tesla, Inc."}}};
+const BAKED = {"asOf": "2026-11-10T18:43:26.767194Z", "source": "tradingview", "quotes": {"SNDK": {"price": 841.0, "dayChange": -45.51, "dayChangePct": -5.1336, "name": "Sandisk Corporation"}, "OKTA": {"price": 176.495, "dayChange": -1.075, "dayChangePct": -0.6054, "name": "Okta, Inc. Class A"}, "DELL": {"price": 325.72, "dayChange": -20.59, "dayChangePct": -5.9455, "name": "Dell Technologies, Inc. Class C"}, "MRNA": {"price": 258.48, "dayChange": -10.52, "dayChangePct": -3.9108, "name": "Moderna, Inc."}, "TWST": {"price": 131.435, "dayChange": -3.905, "dayChangePct": -2.8853, "name": "Twist Bioscience Corp."}, "TER": {"price": 241.96, "dayChange": -4.04, "dayChangePct": -1.6423, "name": "Teradyne, Inc."}, "NKE": {"price": 38.985, "dayChange": -0.895, "dayChangePct": -2.2442, "name": "NIKE, Inc. Class B"}, "TSLA": {"price": 377.09, "dayChange": -0.96, "dayChangePct": -0.2539, "name": "Tesla, Inc."}}};
 
-const CACHE_KEY = "stock-tracker-v1";
+const CACHE_KEY = "stock-tracker-v2";
 const $ = (id) => document.getElementById(id);
 const money = (n) => (n==null||Number.isNaN(n)) ? "—" : n.toLocaleString("en-US",{style:"currency",currency:"USD"});
 const pct = (n) => (n==null||Number.isNaN(n)) ? "—" : `${n>=0?"+":""}${n.toFixed(2)}%`;
@@ -165,40 +165,9 @@ async function fetchPricesJson() {
   return { asOf: d.asOf || new Date().toISOString(), source: d.source || "prices.json", quotes: d.quotes };
 }
 
-async function yahooOne(ticker) {
-  const yurl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=5d`;
-  const proxied = "https://api.allorigins.win/raw?url=" + encodeURIComponent(yurl);
-  const r = await fetch(proxied, { cache: "no-store" });
-  if (!r.ok) throw new Error("yahoo proxy " + r.status);
-  const d = await r.json();
-  const m = d?.chart?.result?.[0]?.meta;
-  if (!m?.regularMarketPrice) throw new Error("yahoo empty " + ticker);
-  const price = Number(m.regularMarketPrice);
-  const prev = Number(m.chartPreviousClose ?? m.previousClose ?? price);
-  return {
-    price,
-    dayChange: price - prev,
-    dayChangePct: prev ? ((price - prev) / prev) * 100 : 0,
-    name: m.shortName || ticker
-  };
-}
-
-async function fetchYahooAllOrigins() {
-  const quotes = {};
-  let ok = 0;
-  await Promise.all(POSITIONS.map(async (p) => {
-    try {
-      quotes[p.ticker] = await yahooOne(p.ticker);
-      ok++;
-    } catch (e) {
-      quotes[p.ticker] = { error: String(e) };
-    }
-  }));
-  if (ok < 4) throw new Error("yahoo proxy only got " + ok);
-  // fill gaps from seed later by caller
-  return { asOf: new Date().toISOString(), source: "Yahoo (allorigins)", quotes };
-}
-
+/* TradingView allows CORS from GitHub Pages, but only for simple
+   request headers. Content-Type: application/json triggers a preflight
+   that only allows Referer,Accept — so the browser blocked refresh. */
 async function fetchTradingView() {
   const body = {
     symbols: { tickers: POSITIONS.map(p => p.tv), query: { types: [] } },
@@ -206,7 +175,7 @@ async function fetchTradingView() {
   };
   const r = await fetch("https://scanner.tradingview.com/america/scan", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "text/plain" },
     body: JSON.stringify(body),
     cache: "no-store"
   });
@@ -222,6 +191,36 @@ async function fetchTradingView() {
   return { asOf: new Date().toISOString(), source: "TradingView", quotes };
 }
 
+async function fetchCnbc() {
+  const symbols = POSITIONS.map(p => p.ticker).join("|");
+  const url = "https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol"
+    + `?symbols=${encodeURIComponent(symbols)}&requestMethod=itv&noform=1&partnerId=2&fund=1&exthrs=1&output=json&events=1`;
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error("cnbc " + r.status);
+  const d = await r.json();
+  const list = d?.FormattedQuoteResult?.FormattedQuote || [];
+  const quotes = {};
+  for (const q of list) {
+    if (!q?.symbol || q.last == null || q.last === "") continue;
+    const price = Number(String(q.last).replace(/,/g, ""));
+    const dayChange = Number(String(q.change || "0").replace(/,/g, ""));
+    let dayChangePct = Number(String(q.change_pct || q.pctchg || "0").replace(/[%+,]/g, ""));
+    if (!Number.isFinite(price)) continue;
+    if (!Number.isFinite(dayChangePct)) {
+      const prev = price - (Number.isFinite(dayChange) ? dayChange : 0);
+      dayChangePct = prev ? ((Number.isFinite(dayChange) ? dayChange : 0) / prev) * 100 : 0;
+    }
+    quotes[q.symbol] = {
+      price,
+      dayChange: Number.isFinite(dayChange) ? dayChange : 0,
+      dayChangePct,
+      name: q.name || q.symbol
+    };
+  }
+  if (Object.keys(quotes).length < 4) throw new Error("cnbc sparse");
+  return { asOf: new Date().toISOString(), source: "CNBC", quotes };
+}
+
 function mergeQuotes(primary, fallback) {
   const out = { ...(fallback.quotes || {}) };
   for (const [t, q] of Object.entries(primary.quotes || {})) {
@@ -232,19 +231,33 @@ function mergeQuotes(primary, fallback) {
 
 async function liveRefresh(seed) {
   const errors = [];
-  const tryOrder = [fetchPricesJson, fetchYahooAllOrigins, fetchTradingView];
+  // Live market sources first. The committed prices.json snapshot must
+  // not count as a successful refresh or the button looks stuck.
+  const tryOrder = [fetchTradingView, fetchCnbc];
   for (const fn of tryOrder) {
     try {
       const live = await fn();
       const quotes = mergeQuotes(live, seed);
-      const payload = { asOf: live.asOf, source: live.source, quotes };
-      // require all 8 priced
       const n = POSITIONS.filter(p => Number.isFinite(Number(quotes[p.ticker]?.price))).length;
       if (n < 8) throw new Error(fn.name + " incomplete " + n);
-      return payload;
+      return { asOf: live.asOf, source: live.source, quotes };
     } catch (e) {
       errors.push((fn.name || "src") + ": " + (e && e.message ? e.message : e));
     }
+  }
+  try {
+    const snap = await fetchPricesJson();
+    const quotes = mergeQuotes(snap, seed);
+    const n = POSITIONS.filter(p => Number.isFinite(Number(quotes[p.ticker]?.price))).length;
+    if (n < 8) throw new Error("prices.json incomplete " + n);
+    const ageMs = Date.now() - new Date(snap.asOf).getTime();
+    const hours = Math.max(0, ageMs / 36e5);
+    const softWarn = hours > 0.5
+      ? `Showing last saved snapshot (${hours < 10 ? hours.toFixed(1) : Math.round(hours)}h old). Live feeds failed: ${errors.join(" | ")}`
+      : null;
+    return { asOf: snap.asOf, source: (snap.source || "prices.json") + " (snapshot)", quotes, softWarn };
+  } catch (e) {
+    errors.push("prices.json: " + (e && e.message ? e.message : e));
   }
   throw new Error(errors.join(" | "));
 }
@@ -258,9 +271,8 @@ async function refresh() {
   try {
     const live = await liveRefresh(seed);
     saveCache(live);
-    render(live);
+    render(live, live.softWarn || null);
   } catch (e) {
-    saveCache(seed);
     render(seed, "Live update failed — showing last known prices. " + e.message);
   } finally {
     btn.disabled = false;
